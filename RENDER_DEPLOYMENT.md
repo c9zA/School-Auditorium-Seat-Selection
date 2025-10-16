@@ -1,20 +1,8 @@
-# Render.com Deployment Guide
+# Render.com Deployment Guide (PostgreSQL)
 
-## Step 1: Prepare Database
+## Step 1: Prepare for PostgreSQL
 
-Since Render's free tier doesn't include databases, we'll use a free external MySQL database.
-
-### Option A: PlanetScale (Recommended)
-1. Go to [planetscale.com](https://planetscale.com)
-2. Sign up with GitHub
-3. Create a new database named `film-db`
-4. Get connection details from the dashboard
-
-### Option B: Aiven
-1. Go to [aiven.io](https://aiven.io)
-2. Sign up for free tier
-3. Create a MySQL service
-4. Note the connection details
+Render.com offers **FREE PostgreSQL** database! This is much better than using external services.
 
 ## Step 2: Deploy to Render
 
@@ -22,33 +10,43 @@ Since Render's free tier doesn't include databases, we'll use a free external My
    - Visit [render.com](https://render.com)
    - Sign up/login with GitHub
 
-2. **Create Web Service**
+2. **Create PostgreSQL Database First**
+   - Click "New +" → "PostgreSQL"
+   - **Name**: `film-database`
+   - **Database**: `film`
+   - **User**: `film_user`
+   - **Region**: Choose closest to you
+   - **Plan**: Free
+   - Click "Create Database"
+
+3. **Create Web Service**
    - Click "New +" → "Web Service"
    - Connect your GitHub repository: `c9zA/School-Auditorium-Seat-Selection`
    - Choose the repository
 
-3. **Configure Service**
+4. **Configure Service**
    - **Name**: `seat-selection-app`
-   - **Region**: Choose closest to you
+   - **Region**: Same as your database
    - **Branch**: `main`
    - **Runtime**: `Python 3`
-   - **Build Command**: `pip install -r requirements-prod.txt`
-   - **Start Command**: `gunicorn app:app`
+   - **Build Command**: `pip install -r requirements-postgres.txt`
+   - **Start Command**: `gunicorn app_postgres:app`
 
-4. **Set Environment Variables**
+5. **Set Environment Variables**
    Click "Advanced" and add these environment variables:
 
+   From your PostgreSQL database dashboard, copy the connection details:
    ```
-   DATABASE_HOST=your_planetscale_host
-   DATABASE_PORT=3306
-   DATABASE_USER=your_planetscale_user
-   DATABASE_PASSWORD=your_planetscale_password
-   DATABASE_NAME=film-db
+   DATABASE_HOST=your_postgres_host_from_render
+   DATABASE_PORT=5432
+   DATABASE_USER=your_postgres_user_from_render
+   DATABASE_PASSWORD=your_postgres_password_from_render
+   DATABASE_NAME=film
    SECRET_KEY=nkenNCEA^qki7RJ&18^zbxQoVZNZW&&g
    PYTHON_VERSION=3.9.16
    ```
 
-5. **Deploy**
+6. **Deploy**
    - Click "Create Web Service"
    - Render will automatically build and deploy your app
 
