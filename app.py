@@ -1,21 +1,84 @@
 import os
-from flask import Flask, render_template, request
-import pymysql
+import sqlite3
+from flask import Flask, render_template, request, g
 import json
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'nkenNCEA^qki7RJ&18^zbxQoVZNZW&&g')
 
 # Database configuration
-def get_db_connection():
-    """Get database connection using environment variables for production"""
-    return pymysql.connect(
-        host=os.environ.get('DATABASE_HOST', '127.0.0.1'),
-        port=int(os.environ.get('DATABASE_PORT', 3306)),
-        user=os.environ.get('DATABASE_USER', 'root'),
-        password=os.environ.get('DATABASE_PASSWORD', 'root'),
-        database=os.environ.get('DATABASE_NAME', 'film'),
-        charset="utf8"
-    )
+DATABASE = os.path.join(app.instance_path, 'film.db')
+
+def get_db():
+    """Get database connection"""
+    if 'db' not in g:
+        # Ensure instance folder exists
+        os.makedirs(app.instance_path, exist_ok=True)
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+def close_db(e=None):
+    """Close database connection"""
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def init_db():
+    """Initialize database with tables and sample data"""
+    db = get_db()
+    
+    # Create tables
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    db.execute('''
+        CREATE TABLE IF NOT EXISTS seats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            row_num INTEGER NOT NULL,
+            column_num INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Create indexes
+    db.execute('CREATE INDEX IF NOT EXISTS idx_seats_username ON seats(username)')
+    db.execute('CREATE INDEX IF NOT EXISTS idx_seats_position ON seats(row_num, column_num)')
+    
+    # Insert sample users
+    sample_users = [
+        ('admin', 'admin'),
+        ('user1', 'password1'),
+        ('user2', 'password2'),
+        ('test', 'test')
+    ]
+    
+    for username, password in sample_users:
+        try:
+            db.execute('INSERT INTO users (username, password) VALUES (?, ?)', 
+                      (username, password))
+        except sqlite3.IntegrityError:
+            # User already exists, skip
+            pass
+    
+    db.commit()
+
+@app.before_first_request
+def initialize_database():
+    """Initialize database before first request"""
+    init_db()
+
+@app.teardown_appcontext
+def close_db_connection(exception):
+    """Close database connection after request"""
+    close_db(exception)
 
 @app.route('/', methods=['GET', 'POST'])
 @app.route('/login', methods=['GET', 'POST'])
@@ -24,23 +87,14 @@ def login():
         userID = request.form.get('username')
         password = request.form.get('password')
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute("select * from user where BINARY username = %s and password = %s", (userID, password))
-        result = cursor.fetchall()
-        user_num = len(result)
+        db = get_db()
+        user = db.execute(
+            'SELECT * FROM users WHERE username = ? AND password = ?', 
+            (userID, password)
+        ).fetchone()
         
-        center_data_list = [{"id": row[0],
-                            "username": str(row[1]),
-                            "password": str(row[2])} for row in result]
-        
-        conn.close()
-        
-        if user_num > 0:
+        if user:
             # Initialize seat layout
-            row = 13
-            col = 27
             res = [[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
                    [-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1],
                    [-1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1],
@@ -56,22 +110,13 @@ def login():
                    [-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1]]
 
             # Get current seat bookings
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("select * from seat")
-            result = cursor.fetchall()
+            seats = db.execute('SELECT * FROM seats').fetchall()
             
-            seat_list = [{"id": row[0],
-                         "username": str(row[1]),
-                         "row_num": int(row[2]),
-                         "column_num": int(row[3])} for row in result]
-            
-            for s in seat_list:
-                res[s['row_num']][s['column_num']] = 1
-                if s['username'] == userID:
-                    res[s['row_num']][s['column_num']] = 2
+            for seat in seats:
+                res[seat['row_num']][seat['column_num']] = 1
+                if seat['username'] == userID:
+                    res[seat['row_num']][seat['column_num']] = 2
                     
-            conn.close()
             return render_template('index.html', res=res, username=userID)
         else:
             return render_template('login.html', error="Invalid username or password")
@@ -81,8 +126,6 @@ def login():
 @app.route('/index', methods=['GET', 'POST'])
 def index():
     userID = request.args.get("username")
-    row = 13
-    col = 27
     res = [[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
            [-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1],
            [-1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1],
@@ -97,22 +140,14 @@ def index():
            [-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1],
            [-1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1]]
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("select * from seat")
-    result = cursor.fetchall()
+    db = get_db()
+    seats = db.execute('SELECT * FROM seats').fetchall()
     
-    seat_list = [{"id": row[0],
-                 "username": str(row[1]),
-                 "row_num": int(row[2]),
-                 "column_num": int(row[3])} for row in result]
-    
-    for s in seat_list:
-        res[s['row_num']][s['column_num']] = 1
-        if s['username'] == userID:
-            res[s['row_num']][s['column_num']] = 2
+    for seat in seats:
+        res[seat['row_num']][seat['column_num']] = 1
+        if seat['username'] == userID:
+            res[seat['row_num']][seat['column_num']] = 2
             
-    conn.close()
     return render_template('index.html', res=res, username=userID)
 
 @app.route('/book', methods=['POST'])
@@ -121,13 +156,10 @@ def book():
     row = request.form.get('row')
     column = request.form.get('column')
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    sql = "insert into seat(username, row_num, column_num) values(%s, %s, %s)"
-    cursor.execute(sql, (username, row, column))
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.execute('INSERT INTO seats(username, row_num, column_num) VALUES (?, ?, ?)', 
+              (username, row, column))
+    db.commit()
     
     return "ok"
 
@@ -137,13 +169,10 @@ def cancel():
     row = request.form.get('row')
     column = request.form.get('column')
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    sql = "delete from seat where BINARY username=%s and row_num=%s and column_num=%s"
-    cursor.execute(sql, (username, row, column))
-    conn.commit()
-    conn.close()
+    db = get_db()
+    db.execute('DELETE FROM seats WHERE username = ? AND row_num = ? AND column_num = ?', 
+              (username, row, column))
+    db.commit()
     
     return "ok"
 
@@ -151,17 +180,11 @@ def cancel():
 def get_detail():
     username = request.args.get("username")
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("select * from seat where username=%s", (username,))
-    result = cursor.fetchall()
+    db = get_db()
+    seats = db.execute('SELECT * FROM seats WHERE username = ?', (username,)).fetchall()
     
-    seat_list = [{"id": row[0],
-                  "username": str(row[1]),
-                  "row_num": int(row[2]),
-                  "column_num": int(row[3])} for row in result]
+    seat_list = [dict(seat) for seat in seats]
     
-    conn.close()
     return render_template('detail.html', seat_list=seat_list, username=username)
 
 if __name__ == '__main__':
