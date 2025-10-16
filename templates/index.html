@@ -1,0 +1,162 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,user-scalable=0" />
+    <title>剧场选座</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <script src="../static/js/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+   <div class="movie_container">
+    <div style="width:800px;"><div style="float:left;margin-left:350px;"><label for="">选择座位</label></div><div style="float:right;right:10px;"><a onclick="get_dt()" href="javascript:void (0);"><input type="button" value="查看/打印所选座位"></a></div></div>
+<!--    <select name="movie" id="movie">-->
+<!--        <option value="19.8">这么多年(￥19.8)</option>-->
+<!--        <option value="25.6">人生路不熟（￥25.6）</option>-->
+<!--        <option value="30">倒数说爱你（￥30）</option>-->
+<!--        <option value="48.8">龙马精神（￥48.8）</option>-->
+
+<!--    </select>-->
+   </div>
+   <style>
+       input[type="button"]{
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #ffffff;
+        background: #03a9f4;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    </style>
+   </style>
+<input id="username" type="hidden" value="{{username}}"/>
+
+   <div class="container">
+    <div class="screen">
+        
+    </div>
+        {% for i in range(13) %}
+<!--           {% if i == 10 %}-->
+<!--            <p>1111111</p>-->
+<!--            {% else %}-->
+<!--                <p>未找到用户{{ name }}</p>-->
+<!--            {% endif %}-->
+
+            <div class="row">
+            {% for j in res[i]%}
+                {% if j == 0 %}
+                <div class="seat" id="{{i}}_{{loop.index0}}"></div>
+                {% else %}
+                    {%  if j == -1 %}
+                        <div class="seat disabled" id="{{i}}_{{loop.index0}}"></div>
+                    {% endif %}
+                    {%  if j == 1 %}
+                        <div class="seat occupied" id="{{i}}_{{loop.index0}}"></div>
+                    {% endif %}
+                    {%  if j == 2 %}
+                        <div class="seat selected" id="{{i}}_{{loop.index0}}"></div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+            </div>
+       {% endfor %}
+<!--    <div class="row">-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--    </div>-->
+
+<!--    <div class="row">-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--    </div>-->
+
+<!--    <div class="row">-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--    </div>-->
+
+<!--    <div class="row">-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--    </div>-->
+
+<!--    <div class="row">-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--        <div class="seat occupied"></div>-->
+<!--    </div>-->
+
+<!--    <p>您已经选择了<span class="count">1</span>个座位，共计<span class="total">100</span>元</p>-->
+   </div>
+   <ul class="showcase">
+    <li>
+         <div class="seat"></div>
+         <i>可选</i>
+    </li>
+   <li>
+     <div class="seat disabled"></div>
+     <i>不可选</i>
+    </li>
+    <li>
+        <div class="seat selected"></div>
+         <i>自己已选</i>
+    </li>
+    <li>
+        <div class="seat occupied"></div>
+         <i>他人已选</i>
+    </li>
+   </ul>
+
+
+    <script src="../static/js/index.js"></script>
+<br/><br/>
+</body>
+</html>
+<script>
+    function get_dt(){
+        var username = document.getElementById("username").value;
+        window.open("/get_detail?username="+username)
+        // top.window.location.href="/get_detail?username="+username;
+    }
+</script>

@@ -1,0 +1,58 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剧场选座详情</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+    <script src="../static/js/jquery-3.4.1.min.js"></script>
+</head>
+<style>
+        body {
+          background-image: url('../static/tic.jpg');
+          background-repeat: no-repeat;
+          background-position: center;
+          background-attachment: fixed;
+          background-size: cover;
+          -webkit-background-size: cover;
+          -moz-background-size: cover;
+          -o-background-size: cover;
+        }
+
+</style>
+<body>
+   <div class="movie_container">
+    <label for="">{{username}}:您选择的座位如下：</label>
+<!--    <select name="movie" id="movie">-->
+<!--        <option value="19.8">这么多年(￥19.8)</option>-->
+<!--        <option value="25.6">人生路不熟（￥25.6）</option>-->
+<!--        <option value="30">倒数说爱你（￥30）</option>-->
+<!--        <option value="48.8">龙马精神（￥48.8）</option>-->
+
+<!--    </select>-->
+   </div>
+   <style>
+       input[type="button"]{
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #ffffff;
+        background: #03a9f4;
+        padding: 10px 20px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    </style>
+   </style>
+<input id="username" type="hidden" value="{{username}}"/>
+
+   <div class="container">
+        {% for j in seat_list%}
+               <div>第 {{j['row_num']+1}} 行&nbsp;&nbsp;&nbsp;第 {{j['column_num']+1}} 列</div>
+        {% endfor %}
+   </div>
+<!--    <a onclick="get_dt()" href="javascript: void(0)" target="_blank"><input type="button" value="查看所选座位"></a>-->
+    <script src="../static/js/index.js"></script>
+</body>
+</html>
+
